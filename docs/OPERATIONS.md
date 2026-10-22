@@ -2,7 +2,7 @@
 
 ## Sviluppo
 
-Node >=18, `npm ci`, `npm start`. Il progetto non richiede una build. Le dipendenze sono fissate nel lockfile. Nell'ambiente cloud usare `npm ci --cache /workspace/.cache/npm`; il percorso predefinito della cache non è scrivibile.
+Per questa release usare Node.js 24 LTS, `npm ci`, `npm start`. Vedere [INSTALLAZIONE.md](../INSTALLAZIONE.md) per il setup locale e VPS. Il progetto non richiede una build. Le dipendenze sono fissate nel lockfile. Nell'ambiente cloud usare `npm ci --cache /workspace/.cache/npm`; il percorso predefinito della cache non è scrivibile.
 
 Alla prima installazione, accedere come amministratore: il programma apre automaticamente `/setup`. La procedura chiede indirizzi del sito, credenziali e ruoli Discord, dati privacy, annunci opzionali e durata del voto. Non è necessario predisporre queste variabili a mano nel sistema operativo. Si può salvare una bozza o scegliere esplicitamente “Configura in seguito — solo prove”; quest’ultima scelta disabilita login Discord e bot. In seguito gli stessi campi si trovano in **Admin → Impostazioni**, mentre MySQL, AI e question builder restano in **Admin → Connections**.
 
@@ -47,4 +47,4 @@ Se MySQL è attivo, eseguire separatamente un backup coerente del database secon
 
 ## Limiti verificati di questa consegna
 
-Codice derivato dallo ZIP originale e importato nel checkout locale inizialmente vuoto. Nessun push o pubblicazione eseguiti. OAuth e bot necessitano di configurazione, credenziali e verifica reale; nessun messaggio è stato inviato a Discord durante lo sviluppo. Nessun pacchetto temi originale era disponibile: grafica/audio dei temi, OBS, MySQL, Roblox e gateway multi-community non sono coperti dai test di questa consegna. Per il gateway occorrono configurazioni e domini distinti per ogni community, con verifica dell'isolamento e dei callback prima di abilitare Discord per i tenant.
+Codice derivato dallo ZIP originale. La release distribuisce il programma senza temi originali e senza credenziali o dati di installazioni precedenti. OAuth e bot necessitano di configurazione, credenziali e verifica reale; nessun messaggio è stato inviato a Discord durante lo sviluppo. Nessun pacchetto temi originale era disponibile: grafica/audio dei temi, OBS, MySQL, Roblox e gateway multi-community non sono coperti dai test di questa consegna. Per il gateway occorrono configurazioni e domini distinti per ogni community, con verifica dell'isolamento e dei callback prima di abilitare Discord per i tenant.

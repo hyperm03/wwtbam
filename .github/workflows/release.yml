@@ -1,0 +1,49 @@
+name: Publish 1.0
+
+on:
+  push:
+    tags:
+      - v1.0
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out release tag
+        uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install and test
+        run: |
+          npm ci
+          npm test
+
+      - name: Build installation archive
+        run: |
+          mkdir -p dist
+          git archive --format=zip --prefix=millionaire-web-1.0/ --output=dist/millionaire-web-1.0.zip HEAD
+          cp INSTALLAZIONE.md dist/INSTALLAZIONE.md
+          cd dist
+          sha256sum millionaire-web-1.0.zip INSTALLAZIONE.md > SHA256SUMS
+          unzip -t millionaire-web-1.0.zip
+
+      - name: Publish release and installation files
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create v1.0 \
+            --verify-tag \
+            --title 'Millionaire Web 1.0' \
+            --notes-file docs/RELEASE-1.0.md \
+            --latest \
+            dist/millionaire-web-1.0.zip \
+            dist/INSTALLAZIONE.md \
+            dist/SHA256SUMS

@@ -23,85 +23,20 @@ feature verified on the stock themes works the same way.
 
 Each **show** is a separate room with its own theme, questions, contestant, output and audience votes.
 
-## Install on the VPS
+## Install version 1.0
 
-Requires Node.js 18 or newer.
-
-```bash
-unzip millionaire-web.zip && cd millionaire-web
-npm install --omit=dev
-ADMIN_PASSWORD='choose-a-password' PORT=13410 node server.js
-```
-
-Settings (environment variables):
-
-| Variable | Default | Meaning |
-|---|---|---|
-| `ADMIN_PASSWORD` | generated and saved only in protected `data/admin-password.txt` | control panel password |
-| `PORT` / `HOST` | `13410` / `0.0.0.0` | where the server listens |
-| `DATA_DIR` | `./data` | shows, themes, secrets |
-| `PUBLIC_URL` | taken from the request | public address used in links and the QR code, e.g. `https://millionaire.example.com` |
-| `MAX_UPLOAD_MB` | `1024` | largest theme zip accepted |
-| `TRUST_PROXY` | off | set to `1` behind a reverse proxy (HTTPS detection, client IPs) |
-| `SESSION_SECRET` | generated in `data/` | signs the login cookies and encrypts the stored secrets (keep it: changing it makes the saved MySQL password and Gemini key unreadable) |
-
-### systemd service
-
-`/etc/systemd/system/millionaire-web.service`:
-
-```ini
-[Unit]
-Description=Millionaire Web
-After=network.target
-
-[Service]
-WorkingDirectory=/home/rocky/millionaire-web
-ExecStart=/usr/bin/node server.js
-Environment=PORT=13410
-Environment=ADMIN_PASSWORD=choose-a-password
-Environment=PUBLIC_URL=https://millionaire.example.com
-Environment=TRUST_PROXY=1
-Restart=always
-User=rocky
-
-[Install]
-WantedBy=multi-user.target
-```
+Download **millionaire-web-1.0.zip** from the [GitHub release](https://github.com/hyperm03/wwtbam/releases/tag/v1.0). Use **Node.js 24 LTS** with npm:
 
 ```bash
-sudo systemctl daemon-reload && sudo systemctl enable --now millionaire-web
+unzip millionaire-web-1.0.zip
+cd millionaire-web-1.0
+npm ci --omit=dev
+npm start
 ```
 
-### HTTPS reverse proxy
+Open `http://127.0.0.1:13410`, sign in as `admin` using the generated password in `data/admin-password.txt`, and follow the setup wizard. Discord credentials, site URLs and privacy settings are requested in the application; no manual `.env` file is required. For initial rehearsals choose “Configura in seguito — solo prove”.
 
-The phones need HTTPS for a smooth experience, and WebSockets must be passed through.
-
-Caddy (`/etc/caddy/Caddyfile`), certificates are automatic:
-
-```
-millionaire.example.com {
-    request_body {
-        max_size 1GB
-    }
-    reverse_proxy 127.0.0.1:13410
-}
-```
-
-nginx:
-
-```nginx
-location / {
-    proxy_pass http://127.0.0.1:13410;
-    proxy_http_version 1.1;
-    proxy_set_header Upgrade $http_upgrade;
-    proxy_set_header Connection "upgrade";
-    proxy_set_header Host $host;
-    proxy_set_header X-Forwarded-Proto $scheme;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    client_max_body_size 1024m;
-    proxy_read_timeout 3600s;
-}
-```
+See **[INSTALLAZIONE.md — guida completa in italiano](INSTALLAZIONE.md)** for VPS/systemd, HTTPS, Discord setup, theme installation, data persistence and backup instructions. The default listener is `0.0.0.0:13410`: use `HOST=127.0.0.1 npm start` for local-only tests on Linux/macOS, and a private listener behind an HTTPS proxy on a VPS. Theme packs are supplied separately.
 
 ## Using it
 
@@ -173,7 +108,7 @@ The game starts on the logo (commercial) and the rules introduction, exactly lik
 
 Sign in with a user name and password.
 
-- **admin** (built-in): its password is `ADMIN_PASSWORD` of the service. It always works, even without MySQL, so you can never be locked out.
+- **admin** (built-in): uses `ADMIN_PASSWORD` if supplied by the host, otherwise the generated password in the protected `data/admin-password.txt` file. It works without MySQL.
 - **Other accounts** are created in Admin → Users (MySQL needed), with two roles:
   - **Operator:** shows, questions, stacks, AI generator, money tree.
   - **Administrator:** also connections, users, system log, theme uploads and deletions.
@@ -561,7 +496,7 @@ Rounds with fewer than 10 players show only their rows in the theme's graphics. 
 
 ### Who can upload themes
 
-- **Every user** (operators too) can upload themes in the **Themes** tab.
+- **Administrators** can upload themes in the **Themes** tab.
 - **Replace and delete:** an operator can replace and delete only the themes **they uploaded**; an administrator can do it for every theme.
 - **Themes without an owner:** themes installed before this version, or copied by hand, have no owner, so only administrators manage them.
 - **Without "Replace":** a theme with a name already in use is added as a copy ("Name (2)").
