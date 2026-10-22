@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#050d33">
+<title>Ask the Audience</title>
+<link rel="icon" type="image/png" sizes="64x64" href="/static/brand/favicon-64.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/brand/favicon-32.png">
+<link rel="apple-touch-icon" href="/static/brand/favicon-180.png">
+<style>
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { margin: 0; height: 100%; }
+    body {
+        font-family: "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif; color: #fff;
+        background: radial-gradient(circle at 50% 30%, #1b3a8f 0%, #06113d 55%, #020617 100%);
+        display: flex; flex-direction: column; align-items: center; padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+    }
+    header { text-align: center; margin: 8px 0 18px; }
+    header .show { font-size: 14px; letter-spacing: .12em; text-transform: uppercase; opacity: .7; }
+    header h1 { margin: 4px 0 0; font-size: 22px; font-weight: 700; }
+    #status { text-align: center; font-size: 17px; min-height: 48px; margin-bottom: 14px; opacity: .92; }
+    .pad { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; width: 100%; max-width: 440px; }
+    .key {
+        border: 3px solid #c9d6ff; border-radius: 999px; background: linear-gradient(#10267a, #050d33);
+        color: #fff; padding: 22px 10px; font-size: 20px; font-weight: 600; display: flex; flex-direction: column;
+        align-items: center; gap: 4px; min-height: 104px; justify-content: center; cursor: pointer; transition: transform .08s, opacity .2s;
+    }
+    .key b { font-size: 34px; color: #ffb52e; }
+    .key span { font-size: 14px; font-weight: 400; opacity: .9; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .key:active:not(:disabled) { transform: scale(.96); }
+    .key:disabled { opacity: .35; cursor: default; }
+    .key.chosen { background: linear-gradient(#ff9a00, #c85e00); border-color: #ffe0a3; opacity: 1; }
+    .key.chosen b { color: #fff; }
+    .key.removed { visibility: hidden; }
+    footer { margin-top: auto; padding-top: 18px; font-size: 12px; opacity: .5; text-align: center; }
+</style>
+</head>
+<body>
+<header>
+    <div class="show" id="show">&nbsp;</div>
+    <h1>Ask the Audience</h1>
+</header>
+<div id="status">Connecting...</div>
+<p id="question" style="max-width:440px;text-align:center"></p>
+<div class="pad" id="pad"></div>
+<footer>Live shows: one vote per Discord account per round. <a href="/account">Account</a> · <a href="/privacy">Privacy</a></footer>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+(function () {
+    const room = decodeURIComponent(location.pathname.split('/')[2] || '');
+    let device = localStorage.getItem('mc_device');
+    if (!device) {
+        device = (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2) + Date.now());
+        localStorage.setItem('mc_device', device);
+    }
+
+    const pad = document.getElementById('pad');
+    const status = document.getElementById('status');
+    const keys = ['A', 'B', 'C', 'D'].map(letter => {
+        const b = document.createElement('button');
+        b.className = 'key';
+        b.innerHTML = `<b>${letter}</b><span></span>`;
+        b.disabled = true;
+        b.addEventListener('click', () => vote(letter));
+        pad.appendChild(b);
+        return b;
+    });
+
+    let view = null, serverOffset = 0;
+    let votedSession = null, votedLetter = null;
+
+    function render() {
+        if (!view) return;
+        document.getElementById('show').textContent = view.show || '';
+        document.getElementById('question').textContent = view.question || '';
+        const voted = votedSession === view.session;
+        keys.forEach((k, i) => {
+            k.querySelector('span').textContent = view.answers?.[i] || '';
+            k.classList.toggle('removed', !!view.out?.[i]);
+            k.classList.toggle('chosen', voted && votedLetter === 'ABCD'[i]);
+            k.disabled = !view.open || voted;
+        });
+        status.textContent = !view.open
+            ? (voted ? `You voted ${votedLetter}. Thank you!` : 'Voting is closed. Wait for the host to ask the audience.')
+            : voted ? `You voted ${votedLetter}. Thank you!` : `Question ${view.level}: vote now! ${view.closesAt ? Math.max(0, Math.ceil((view.closesAt - Date.now() - serverOffset) / 1000)) + ' s' : ''}`;
+    }
+
+    function vote(letter) {
+        if (!view?.open || !socket.connected) return;
+        keys.forEach(k => k.disabled = true);
+        socket.timeout(4000).emit('vote', { device, letter, round: view.round }, (error, res) => {
+            if (error) { status.textContent = 'Vote not confirmed. Check the connection before trying again.'; render(); return; }
+            if (res?.ok || res?.reason === 'already') {
+                votedSession = view.session;
+                votedLetter = res.letter || letter;
+                if (navigator.vibrate) navigator.vibrate(40);
+            } else if (res?.reason === 'closed') {
+                status.textContent = 'Voting has just closed.';
+            }
+            render();
+        });
+    }
+
+    const socket = io({ query: { role: 'voter', room } });
+    socket.on('voting', v => {
+        if (view && v.session !== view.session) { votedSession = null; votedLetter = null; }
+        view = v;
+        serverOffset = v.serverNow - Date.now();
+        render();
+    });
+    setInterval(() => { if (socket.connected && view) render(); }, 500);
+    socket.on('fatal', msg => { status.textContent = msg; keys.forEach(k => k.disabled = true); const a = document.createElement('a'); a.href = `/account?room=${encodeURIComponent(room)}&next=${encodeURIComponent(location.pathname)}`; a.textContent = 'Sign in and check in'; status.append(document.createElement('br'), a); });
+    socket.on('disconnect', () => { socket.sendBuffer = []; status.textContent = 'Connection lost, reconnecting...'; keys.forEach(k => k.disabled = true); });
+    socket.on('connect', () => { if (view) render(); });
+})();
+</script>
+</body>
+</html>

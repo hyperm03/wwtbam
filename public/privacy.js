@@ -1,0 +1,8 @@
+fetch('/auth/discord/status', { cache: 'no-store' }).then(r => r.json()).then(({ privacy: p, enabled }) => {
+    document.getElementById('controller').textContent = `Titolare: ${p.controller || 'da configurare'}. Contatto privacy: ${p.contact || 'da configurare'}.`;
+    document.getElementById('incomplete').textContent = enabled ? '' : 'Il login Discord non è attivo. L’informativa e le impostazioni devono essere completate e verificate dal gestore.';
+    document.getElementById('hosting').textContent = `Hosting dichiarato dal gestore: ${p.region || 'da specificare, inclusi fornitori e garanzie sui trasferimenti'}.`;
+    document.getElementById('retention').textContent = `Gli account inattivi e le iscrizioni collegate sono eliminati entro ${p.retentionDays} giorni più un'ora per la pulizia automatica. Le scelte di voto sono cancellate alla chiusura del turno. Le sessioni scadute sono rimosse entro un minuto. I backup dell'identità dei partecipanti non sono inclusi nello strumento di backup del gioco; il gestore deve applicare un ciclo di cancellazione anche a eventuali snapshot dell'hosting.`;
+    document.getElementById('age').textContent = `Accesso riservato a chi ha almeno ${p.minAge} anni. Richiediamo una dichiarazione, senza raccogliere la data di nascita. Non è un sistema di verifica dell’età e non sostituisce gli obblighi locali del gestore.`;
+    document.getElementById('version').textContent = 'Versione: ' + p.policyVersion;
+}).catch(() => { document.getElementById('incomplete').textContent = 'Impossibile caricare l’informativa aggiornata. Il login non è disponibile.'; });

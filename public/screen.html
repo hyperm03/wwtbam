@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Screen</title>
+<link rel="icon" type="image/png" sizes="64x64" href="/static/brand/favicon-64.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/brand/favicon-32.png">
+<link rel="apple-touch-icon" href="/static/brand/favicon-180.png">
+<style>
+    html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+    body { font-family: "Segoe UI", Arial, Helvetica, sans-serif; color: #fff; }
+    #stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; background: #000; overflow: hidden; }
+
+    /* ---------------------------------------------------------------- question and answers (Q4ALoz is 800x180) */
+    #qa { position: absolute; left: 0; top: 10px; width: 1920px; height: 432px; background: url(/static/screens/Q4ALoz.jpg) 0 0 / 100% 100% no-repeat; }
+    #question { position: absolute; left: 150px; top: 24px; width: 1620px; height: 162px; display: flex; align-items: center; justify-content: center;
+        text-align: center; font-size: 52px; line-height: 1.12; overflow: hidden; }
+    /* Questions and answers in Conduit ITC (from the theme's Fonts folder, or installed on this computer) */
+    #question, .ans .txt { font-family: "MCConduit", "Conduit ITC", "ITC Conduit", "Segoe UI", Arial, sans-serif; font-weight: normal; }
+    #question .label { display: block; font-size: 0.8em; font-weight: 500; }
+    .ans { position: absolute; height: 112px; }
+    .ans .over { position: absolute; inset: 0; background: 0 0 / 100% 100% no-repeat; display: none; }
+    .ans .txt { position: absolute; top: 0; height: 100%; display: flex; align-items: center; font-size: 44px; white-space: nowrap; overflow: hidden; }
+    .ans.locked .over, .ans.revealed .over { display: block; }
+    .ans.locked .txt, .ans.revealed .txt { color: #000; }
+    /* Positions measured on Q4ALoz (800x180, scaled 2.4x): A/C from the left tip (x 38) to the join (x 404),
+       B/D from the join to their right tip (x 758); rows at y 82 and 132, 47 px high */
+    #ansA, #ansC { left: 91px; width: 879px; }
+    #ansB, #ansD { left: 970px; width: 849px; }
+    #ansA, #ansB { top: 197px; }
+    #ansC, #ansD { top: 317px; }
+    .ans { height: 113px; }
+    /* The orange/green lozenge images have black corners: clip them to the lozenge shape */
+    .ans .over { --slant: 7.5%; clip-path: polygon(0 50%, var(--slant) 0, calc(100% - var(--slant)) 0, 100% 50%, calc(100% - var(--slant)) 100%, var(--slant) 100%); }
+    #ansA .txt, #ansC .txt { left: 140px; width: 690px; }
+    #ansB .txt, #ansD .txt { left: 140px; width: 660px; }
+
+    /* ---------------------------------------------------------------- host boxes */
+    .box { position: absolute; width: 460px; height: 86px; display: flex; align-items: center; font-size: 46px; font-weight: 700; }
+    .box img { width: 86px; height: 86px; flex: none; }
+    .box span { flex: 1; text-align: right; padding-right: 18px; white-space: nowrap; overflow: hidden; }
+    .box[hidden] { display: none !important; }
+    #boxAway { left: 20px; top: 548px; background: #0029ff; }
+    #boxCash { left: 500px; top: 548px; background: #ff7f00; }
+    #boxTick { left: 20px; top: 646px; background: #00ad2a; }
+    #boxCross { left: 500px; top: 646px; background: #db1718; }
+    #boxDrop { left: 980px; top: 646px; background: #23c5eb; }
+    /* Correct-answer square: empty until the final answer is locked, then green (right) or red with the correct letter (wrong) */
+    #boxAnswer { left: 980px; top: 548px; width: 86px; height: 86px; justify-content: center; font-size: 60px; box-sizing: border-box; border: 3px solid #fff; }
+    #boxAnswer.right { background: #00ad2a; }
+    #boxAnswer.wrong { background: #db1718; }
+
+    /* ---------------------------------------------------------------- money tree */
+    #tree { position: absolute; left: 1450px; top: 462px; width: 460px; height: 608px; background: url(/static/screens/MtreeBG.jpg) center / cover no-repeat; }
+    #lifelines { display: flex; justify-content: space-around; padding: 8px 6px 4px; height: 74px; box-sizing: border-box; }
+    #lifelines img { height: 62px; clip-path: ellipse(50% 50% at 50% 50%); }
+    #levels { padding: 4px 10px; }
+    .lvl { display: grid; grid-template-columns: 52px 1fr; gap: 16px; height: 34px; align-items: center; font-size: 29px; font-weight: 700; color: #ffb52e; position: relative; }
+    .lvl .n { text-align: right; }
+    .lvl.milestone { color: #fff; }
+    .lvl.hl { background: url(/static/screens/ALozSelected.jpg) 0 0 / 100% 100% no-repeat; color: #000; }
+    .host .lvl.playing::before { content: "\25B6"; position: absolute; left: -4px; font-size: 16px; color: #ffb52e; }
+
+    /* ---------------------------------------------------------------- comment and contestant */
+    .panel { position: absolute; left: 20px; width: 1400px; box-sizing: border-box; border: 4px solid #5ec8ff; border-radius: 22px; background: #000;
+        padding: 14px 26px; display: flex; align-items: center; }
+    #comment { top: 746px; height: 190px; font-size: 38px; line-height: 1.22; align-items: flex-start; overflow: hidden; }
+    #comment[hidden], #lifeline[hidden], #message[hidden] { display: none !important; }
+
+    /* Clocked 2009: question clock (both screens) */
+    #clock { position: absolute; left: 1086px; top: 548px; width: 334px; height: 86px; box-sizing: border-box; border: 4px solid #5ec8ff; border-radius: 18px;
+        background: #000; display: flex; align-items: center; justify-content: space-between; padding: 0 18px; }
+    #clock[hidden] { display: none !important; }
+    #clock .secs { font-size: 62px; font-weight: 800; line-height: 1; }
+    #clock .banked { font-size: 20px; color: #ffb52e; text-align: right; line-height: 1.15; }
+    #clock.gold { border-color: #ffc400; }
+    #clock.gold .secs { color: #ffd54a; }
+    #clock.low .secs { color: #ff4d3a; }
+    #clock.stopped .secs { opacity: .75; }
+    #clock.timeup { border-color: #ff4d3a; }
+    #clock.timeup .secs { color: #ff4d3a; font-size: 44px; }
+    /* Player screen: centred under the answers, above the audience / call panel */
+    .player #clock { left: 543px; top: 458px; }
+
+    /* Message from the control room to the host */
+    #message { position: absolute; left: 20px; top: 452px; width: 1400px; height: 84px; box-sizing: border-box; border-radius: 16px;
+        background: #ffd400; color: #000; font-size: 40px; font-weight: 700; display: flex; align-items: center; gap: 18px; padding: 0 22px; overflow: hidden;
+        animation: msgIn .5s ease-out; }
+    #message .tag { font-size: 20px; font-weight: 800; background: #000; color: #ffd400; border-radius: 8px; padding: 4px 10px; flex: none; }
+    #message .text { flex: 1; white-space: nowrap; overflow: hidden; }
+    @keyframes msgIn { from { transform: translateY(-12px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+    /* Ask the Audience results / Phone a Friend clock, in the comment area (host) or the same place (player) */
+    #lifeline { top: 746px; height: 190px; flex-direction: column; align-items: stretch; justify-content: center; padding: 8px 30px; }
+    .player #lifeline { top: 566px; height: 370px; padding: 16px 40px; }
+    #lifeline .ata-row { display: grid; grid-template-columns: 56px 1fr 160px; align-items: center; font-size: 34px; font-weight: 600; line-height: 1.25; }
+    .player #lifeline .ata-row { font-size: 50px; line-height: 1.4; }
+    #lifeline .ata-row b { color: #ffb52e; }
+    #lifeline .ata-row .pct { text-align: right; font-weight: 800; }
+    #lifeline .ata-row.out { opacity: .3; }
+    #lifeline .paf { display: flex; align-items: center; justify-content: center; gap: 40px; }
+    #lifeline .paf .label { font-size: 34px; color: #ffb52e; font-weight: 700; }
+    #lifeline .paf .secs { font-size: 130px; font-weight: 800; line-height: 1; }
+    .player #lifeline .paf .secs { font-size: 220px; }
+    #lifeline .paf .secs.low { color: #ff4d3a; }
+    #comment .category { color: #ffb52e; font-weight: 700; margin-right: 12px; }
+    #contestant { top: 950px; height: 110px; justify-content: center; font-size: 50px; font-weight: 700; text-transform: uppercase; white-space: nowrap; overflow: hidden; }
+    .player .host-only { display: none !important; }
+
+    /* Transparent in OBS (or with ?bg=transparent): the boxes and panels keep their own colours, nothing black behind them */
+    html.transparent, html.transparent body, html.transparent #stage { background: transparent !important; }
+    /* Player screen: the contestant types their own name / alias and hometown (outside the scaled stage) */
+    #nameButton { position: fixed; right: 18px; bottom: 18px; z-index: 20; font: 600 18px "Segoe UI", Arial, sans-serif; color: #fff;
+        background: rgba(20, 38, 110, .85); border: 2px solid #8fb0ff; border-radius: 999px; padding: 10px 20px; cursor: pointer;
+        opacity: 0; pointer-events: none; transition: opacity .4s; }
+    #nameButton.show { opacity: 1; pointer-events: auto; }
+    #nameForm { position: fixed; inset: 0; z-index: 30; background: rgba(0, 0, 20, .78); display: flex; align-items: center; justify-content: center; }
+    #nameForm[hidden] { display: none; }
+    #nameForm form { background: #0b1740; border: 2px solid #5ec8ff; border-radius: 18px; padding: 28px 32px; width: min(560px, 92vw);
+        display: flex; flex-direction: column; gap: 14px; font: 18px "Segoe UI", Arial, sans-serif; color: #fff; }
+    #nameForm h2 { margin: 0; font-size: 26px; }
+    #nameForm label { display: flex; flex-direction: column; gap: 6px; }
+    #nameForm input { font: 22px "Segoe UI", Arial, sans-serif; padding: 10px 12px; border-radius: 10px; border: 1px solid #5ec8ff; background: #04102f; color: #fff; }
+    #nameForm .buttons { display: flex; gap: 10px; justify-content: flex-end; }
+    #nameForm button { font: 600 18px "Segoe UI", Arial, sans-serif; padding: 10px 20px; border-radius: 10px; border: 1px solid #8fb0ff; background: #16245a; color: #fff; cursor: pointer; }
+    #nameForm button.primary { background: #ff9a00; border-color: #ffb52e; color: #000; }
+    #nameForm .msg { min-height: 22px; color: #ffb52e; }
+    #offline { position: absolute; right: 24px; top: 1040px; font-size: 22px; color: #ff7f7f; display: none; }
+    #offline.on { display: block; }
+</style>
+<style id="mc-layout"></style>
+</head>
+<body>
+<div id="stage" data-edit="background" data-edit-label="Background">
+    <div id="qa" data-edit="qa" data-edit-label="Question and answers block">
+        <div id="question" data-edit="question" data-edit-label="Question text"></div>
+        <div class="ans" id="ansA" data-edit="answer-a" data-edit-label="Answer A"><div class="over" style="background-image:url(/static/screens/QLozASel.jpg)"></div><div class="txt" data-edit="answer-text" data-edit-label="Answer texts (all four)"></div></div>
+        <div class="ans" id="ansB" data-edit="answer-b" data-edit-label="Answer B"><div class="over" style="background-image:url(/static/screens/QLozBSel.jpg)"></div><div class="txt" data-edit="answer-text" data-edit-label="Answer texts (all four)"></div></div>
+        <div class="ans" id="ansC" data-edit="answer-c" data-edit-label="Answer C"><div class="over" style="background-image:url(/static/screens/QLozCSel.jpg)"></div><div class="txt" data-edit="answer-text" data-edit-label="Answer texts (all four)"></div></div>
+        <div class="ans" id="ansD" data-edit="answer-d" data-edit-label="Answer D"><div class="over" style="background-image:url(/static/screens/QLozDSel.jpg)"></div><div class="txt" data-edit="answer-text" data-edit-label="Answer texts (all four)"></div></div>
+    </div>
+
+    <div class="box host-only" id="boxAway" data-edit="box-away" data-edit-label="Box: Away"><img src="/static/screens/Away.jpg" alt=""><span></span></div>
+    <div class="box host-only" id="boxCash" data-edit="box-cash" data-edit-label="Box: amount won"><img src="/static/screens/CashMountain.jpg" alt=""><span></span></div>
+    <div class="box host-only" id="boxAnswer" hidden data-edit="box-answer" data-edit-label="Box: correct answer square"></div>
+    <div class="box host-only" id="boxTick" data-edit="box-tick" data-edit-label="Box: right answer"><img src="/static/screens/Tick.jpg" alt=""><span></span></div>
+    <div class="box host-only" id="boxCross" data-edit="box-cross" data-edit-label="Box: wrong answer"><img src="/static/screens/RedCross.jpg" alt=""><span></span></div>
+    <div class="box host-only" id="boxDrop" data-edit="box-drop" data-edit-label="Box: what is lost"><img src="/static/screens/Drop.jpg" alt=""><span></span></div>
+
+    <div id="tree" data-edit="tree" data-edit-label="Money tree"><div id="lifelines" data-edit="tree-lifelines" data-edit-label="Money tree: lifelines"></div><div id="levels" data-edit="tree-levels" data-edit-label="Money tree: amounts"></div></div>
+
+    <div id="clock" hidden data-edit="clock" data-edit-label="Question clock (Clocked)"><span class="secs"></span><span class="banked"></span></div>
+    <div class="host-only" id="message" hidden data-edit="message" data-edit-label="Message from the control room"><span class="tag">CONTROL</span><span class="text"></span></div>
+    <div class="panel host-only" id="comment" data-edit="comment" data-edit-label="Host comment"></div>
+    <div class="panel" id="lifeline" hidden data-edit="lifeline-panel" data-edit-label="Audience results / Phone a Friend clock"></div>
+    <div class="panel" id="contestant" data-edit="contestant" data-edit-label="Contestant name"></div>
+    <div id="offline">Connection lost...</div>
+</div>
+<button id="nameButton" type="button" hidden>&#9998; Your name</button>
+<div id="nameForm" hidden>
+    <form autocomplete="off">
+        <h2>Who's playing?</h2>
+        <label>Name or alias <input name="first" maxlength="60" required></label>
+        <label>Surname (optional) <input name="last" maxlength="60"></label>
+        <label>From <input name="location" maxlength="80" placeholder="e.g. Milano"></label>
+        <div class="msg"></div>
+        <div class="buttons"><button type="button" data-close>Cancel</button><button type="submit" class="primary">Save</button></div>
+    </form>
+</div>
+<script src="/socket.io/socket.io.js"></script>
+<script src="/static/screen.js"></script>
+</body>
+</html>

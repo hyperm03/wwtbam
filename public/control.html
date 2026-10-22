@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Millionaire Control</title>
+<link rel="icon" type="image/png" sizes="64x64" href="/static/brand/favicon-64.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/brand/favicon-32.png">
+<link rel="apple-touch-icon" href="/static/brand/favicon-180.png">
+<script src="/static/theme.js"></script>
+<link rel="stylesheet" href="/static/control.css">
+</head>
+<body>
+<header class="top">
+    <a class="brand-logo" href="/home" title="Home page"><img src="/static/brand/tph-circle-128.png" alt="TPH - home page" data-brand-logo="128"></a>
+    <label>Show <select id="roomSelect"></select></label>
+    <button id="newRoom" title="Create a new show">+ New show</button>
+    <label>Theme <select id="themeSelect"></select></label>
+    <button id="reloadOutput" title="Reload the output with a fresh cache (F5)">Reload output</button>
+    <button id="linksButton">Output &amp; audience links</button>
+    <button id="liveTools">Preparation &amp; recovery</button>
+    <span class="spacer"></span>
+    <span class="theme-switch" id="themeSwitch" title="Light / dark mode of the control panel">
+        <button data-theme-choice="system">System</button>
+        <button data-theme-choice="light">&#9728; Light</button>
+        <button data-theme-choice="dark">&#9790; Dark</button>
+    </span>
+    <span id="whoami" class="muted" style="color:#c7d2fe"></span>
+    <form method="post" action="/logout"><button type="submit">Sign out</button></form>
+</header>
+
+<nav class="tabs">
+    <button data-page="show" class="active">Show</button>
+    <button data-page="questions">Questions</button>
+    <button data-page="fff">Fastest Finger</button>
+    <button data-page="roblox">Roblox</button>
+    <button data-page="bank">Question bank</button>
+    <button data-page="shows">Shows</button>
+    <button data-page="schedule">Calendar</button>
+    <button data-page="themes">Themes</button>
+    <button data-page="layout" id="layoutTab" class="hidden">Layout</button>
+    <button data-page="admin" id="adminTab" class="hidden">Admin</button>
+</nav>
+
+<main>
+    <!-- ============================================================ SHOW -->
+    <section class="page active" id="page-show">
+        <div class="show-grid">
+            <div class="stack">
+                <div class="card row">
+                    <label>First name <input type="text" id="cFirst" size="12"></label>
+                    <label>Last name <input type="text" id="cLast" size="12"></label>
+                    <label>From <input type="text" id="cLocation" size="16"></label>
+                    <button id="sendContestant">Send name</button>
+                </div>
+
+                <div class="card">
+                    <div class="ll-tabs" id="llTabs"></div>
+                    <div id="llPanels"></div>
+                </div>
+
+                <div class="big-buttons">
+                    <button data-key="37" title="Rules and money tree (left arrow)">&#9664; Rules / Money tree</button>
+                    <button data-key="39" title="Lights, question, answers, correct answer, winnings (right arrow)">Next &#9654;</button>
+                    <button data-key="40" title="Total prize won (down arrow)">&#9660; Total prize</button>
+                </div>
+
+                <div class="card">
+                    <div class="row" style="justify-content:space-between">
+                        <strong id="qHeader">Question 1</strong>
+                        <span class="row">
+                            <button id="hostCommentToggle" title="Show or hide the host comment on the host screen">Host comment: OFF</button>
+                            <button id="editLive">Edit</button>
+                        </span>
+                    </div>
+                    <div class="question-text" id="qText"></div>
+                </div>
+
+                <div class="card hidden" id="endedBanner" style="border-color:var(--red);background:var(--bad-row)"></div>
+                <div class="answers" id="answers"></div>
+                <div class="legend">
+                    <label><input type="checkbox" id="highlightCorrect" checked> Highlight the correct answer (operator only)</label>
+                    <span><i style="background:var(--green)"></i>correct</span>
+                    <span><i style="background:var(--orange)"></i>locked</span>
+                    <span><i style="background:var(--lime)"></i>locked and correct</span>
+                    <span style="flex:1"></span>
+                    <button id="cancelFinal" disabled title="Selected the wrong answer by mistake? Unlocks it, restarts the question music and puts the question back in play">&#8617; Cancel final answer</button>
+                </div>
+
+                <div class="card stack hidden" id="clockCard">
+                    <h3 style="margin:0">Question clock (Clocked)</h3>
+                    <div class="row">
+                        <div class="clock" id="clockSeconds">-</div>
+                        <div class="stack">
+                            <div id="clockStatus" class="muted"></div>
+                            <div id="clockBanked"></div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <button data-key="38" title="Show the clock before revealing the question (key Up arrow)">&#8593; Show the clock</button>
+                        <button data-key="48" class="primary" title="Pause or resume the question clock (key 0)">0 &nbsp;Pause / resume</button>
+                        <button data-key="66" title="Show or hide the banked time (key B)">B &nbsp;Banked time</button>
+                    </div>
+                </div>
+
+                <div class="card stack">
+                    <h3 style="margin:0">Message to the host</h3>
+                    <div class="row">
+                        <input type="text" id="hostMsgText" maxlength="500" placeholder="Shown at once on the host screen (Enter to send)" style="flex:1">
+                        <button class="primary" id="hostMsgSend">Send</button>
+                        <button id="hostMsgClear">Clear</button>
+                    </div>
+                    <div class="muted" id="hostMsgNow">No message on the host screen.</div>
+                </div>
+
+                <div class="card">
+                    <h3>Show control</h3>
+                    <div class="keys" id="showKeys"></div>
+                    <label class="muted" style="margin-top:8px"><input type="checkbox" id="keyboardKeys" checked> Game keys work on the keyboard in this page</label>
+                </div>
+            </div>
+
+            <div class="stack">
+                <div class="card leds" id="leds"></div>
+                <div class="card">
+                    <h3>Money tree</h3>
+                    <div class="tree" id="tree"></div>
+                    <label class="muted" style="margin-top:8px"><input type="checkbox" id="treeClick" checked> Click a level to restart from that question</label>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============================================================ QUESTIONS -->
+    <section class="page" id="page-questions">
+        <div class="q-layout">
+            <div class="card">
+                <h3>Levels</h3>
+                <label style="margin-bottom:8px"><input type="checkbox" id="editSwitch"> Replacement questions (Switch the Question)</label>
+                <div class="q-list" id="qList"></div>
+            </div>
+            <div class="card stack">
+                <h3 id="qEditTitle">Question 1</h3>
+                <div class="q-editor">
+                    <span>Category</span><input type="text" id="qeCategory">
+                    <span>Question</span><textarea id="qeText"></textarea>
+                    <label><input type="radio" name="qeCorrect" value="0"> A</label><input type="text" data-answer="0">
+                    <label><input type="radio" name="qeCorrect" value="1"> B</label><input type="text" data-answer="1">
+                    <label><input type="radio" name="qeCorrect" value="2"> C</label><input type="text" data-answer="2">
+                    <label><input type="radio" name="qeCorrect" value="3"> D</label><input type="text" data-answer="3">
+                    <span>Host comment</span><textarea id="qeComment" rows="3" placeholder="Background for the host: shown only on the host screen"></textarea>
+                </div>
+                <p class="muted">The selected radio button marks the correct answer. Changes are saved on the server and sent to the game automatically.
+                    A line break in the question becomes a new line on screen.</p>
+                <div class="row">
+                    <span id="qeSaved" class="muted"></span>
+                    <span class="spacer" style="flex:1"></span>
+                    <button id="qeRedraw" title="Rewrites the question currently on screen">Fix on screen</button>
+                    <button id="qeFile" class="primary">Import from file...</button>
+                    <button id="qeBuilder" class="primary">Import from question builder...</button>
+                    <button id="qeAi" class="primary">Generate with AI...</button>
+                    <button id="qeImport">Import from theme XML</button>
+                    <button id="qeExport">Save to theme XML</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card stack" style="margin-top:14px">
+            <div class="row" style="justify-content:space-between">
+                <h3 style="margin:0">Question stacks (MySQL)</h3>
+                <div class="row">
+                    <button id="stackSave" class="primary">Save this show's questions as a stack...</button>
+                    <button id="stackRefresh">Refresh</button>
+                </div>
+            </div>
+            <p class="muted" style="margin:0">Every AI generation is saved here automatically. Load a stack into the show, or keep your own sets for future shows.</p>
+            <div id="stackList"></div>
+        </div>
+    </section>
+
+    <!-- ============================================================ FASTEST FINGER -->
+    <section class="page" id="page-fff"><div id="fffBody"></div></section>
+
+    <!-- ============================================================ QUESTION BANK -->
+    <section class="page" id="page-bank"><div id="bankBody"></div></section>
+
+    <!-- ============================================================ CALENDAR -->
+    <section class="page" id="page-schedule"><div id="scheduleBody"></div></section>
+
+    <!-- ============================================================ SHOWS -->
+    <section class="page" id="page-shows">
+        <div class="card stack">
+            <div class="row" style="justify-content:space-between">
+                <h3 style="margin:0">Shows</h3>
+                <div class="row"><button id="showsNew" class="primary">+ New show</button><button id="showsRefresh">Refresh</button></div>
+            </div>
+            <div id="showsList"></div>
+        </div>
+        <div class="card stack" style="margin-top:14px" id="showLogCard"></div>
+    </section>
+
+    <!-- ============================================================ ROBLOX SET -->
+    <section class="page" id="page-roblox"><div id="robloxBody"></div></section>
+
+    <!-- ============================================================ LAYOUT EDITOR -->
+    <section class="page" id="page-layout"><div id="layoutBody"></div></section>
+
+    <!-- ============================================================ ADMIN -->
+    <section class="page" id="page-admin">
+        <nav class="subtabs">
+            <button data-admin="installation">Impostazioni</button>
+            <button data-admin="connections" class="active">Connections</button>
+            <button data-admin="users">Users</button>
+            <button data-admin="logs">System log</button>
+            <button data-admin="about">Info / About</button>
+        </nav>
+        <div id="adminBody"></div>
+    </section>
+
+    <!-- ============================================================ THEMES -->
+    <section class="page" id="page-themes">
+        <div class="card stack" style="margin-bottom:14px">
+            <h3>Upload theme pack</h3>
+            <div class="row">
+                <input type="file" id="themeFile" accept=".zip">
+                <label><input type="checkbox" id="themeOverwrite"> Replace themes with the same name</label>
+                <button class="primary" id="themeUpload">Upload</button>
+                <progress id="uploadProgress" max="100" value="0" class="hidden"></progress>
+                <span id="uploadStatus" class="muted"></span>
+            </div>
+            <p class="muted">A zip with one theme or a whole pack: every folder containing <code>default.html</code> becomes a theme.
+                Themes contain scripts that run on the output page, so only upload packs you trust.
+                Without "Replace", a theme with a name already in use is added as a copy ("Name (2)"). <span id="themeRules"></span></p>
+        </div>
+        <div class="themes" id="themeList"></div>
+    </section>
+</main>
+
+<div id="statusbar"><span class="msg" id="statusMsg">Connecting...</span><span id="statusInfo" class="muted"></span></div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="/static/control.js"></script>
+<script src="/static/installation-form.js"></script>
+<script src="/static/live-tools.js"></script>
+<script src="/static/control-tools.js"></script>
+<script src="/static/control-admin.js"></script>
+<script src="/static/control-shows.js"></script>
+<script src="/static/control-bank.js"></script>
+<script src="/static/control-schedule.js"></script>
+<script src="/static/control-fff.js"></script>
+<script src="/static/control-layout.js"></script>
+<script src="/static/control-roblox.js"></script>
+<script src="/static/branding.js"></script>
+</body>
+</html>

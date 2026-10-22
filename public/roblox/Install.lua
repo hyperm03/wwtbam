@@ -1,0 +1,51 @@
+--[[ Millionaire Show Control - INSTALLER (run once)
+     1. SAVE A COPY OF YOUR PLACE FIRST.
+     2. Put MillionaireButtons (ModuleScript) and MillionaireLink (Script) in ServerScriptService.
+     3. Studio: View > Command Bar, paste ALL of this text in the command bar, press Enter.
+     It links every control button of the set to the web control room: in each server script that connects a click,
+     "X.MouseClick:Connect(" becomes "__MB.connect(X, " (nothing else changes; the buttons work exactly as before).
+     The original text of every changed script is kept in ServerStorage/MillionaireBackup (Uninstall.lua restores it).
+]]
+local SSS = game:GetService("ServerScriptService")
+local SS = game:GetService("ServerStorage")
+if not SSS:FindFirstChild("MillionaireButtons") then
+	error("Put the ModuleScript MillionaireButtons in ServerScriptService first")
+end
+local backup = SS:FindFirstChild("MillionaireBackup")
+if not backup then
+	backup = Instance.new("Folder")
+	backup.Name = "MillionaireBackup"
+	backup.Parent = SS
+end
+local HEADER = 'local __MB = require(game:GetService("ServerScriptService"):WaitForChild("MillionaireButtons")) -- Millionaire Show Control\n'
+local PATTERN = "([%a_][%w_%.%[%]\"':%(%)]-)%.MouseClick%s*:%s*[cC]onnect%s*%("
+local changed, already, skipped = 0, 0, 0
+for _, s in ipairs(game:GetDescendants()) do
+	if s:IsA("Script") and not s:IsA("LocalScript") and s.Parent ~= backup then
+		local ok, src = pcall(function() return s.Source end)
+		if ok and string.find(src, "MouseClick", 1, true) then
+			if string.find(src, "__MB.connect(", 1, true) then
+				already += 1
+			else
+				local new, n = string.gsub(src, PATTERN, "__MB.connect(%1, ")
+				if n > 0 then
+					local keep = Instance.new("StringValue")
+					keep.Name = s.Name
+					keep.Value = src
+					keep:SetAttribute("Path", s:GetFullName())
+					local target = Instance.new("ObjectValue")
+					target.Name = "Target"
+					target.Value = s -- a direct reference: right even when several scripts share the same name
+					target.Parent = keep
+					keep.Parent = backup
+					s.Source = HEADER .. new
+					changed += 1
+				else
+					skipped += 1
+				end
+			end
+		end
+	end
+end
+print(("[Millionaire] %d button scripts linked, %d were already linked, %d not changed (no MouseClick:Connect)."):format(changed, already, skipped))
+print("[Millionaire] Now turn on Game Settings > Security > Allow HTTP Requests, publish, and the set is linked.")

@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Home - Millionaire Control</title>
+<link rel="icon" type="image/png" sizes="64x64" href="/static/brand/favicon-64.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/brand/favicon-32.png">
+<link rel="apple-touch-icon" href="/static/brand/favicon-180.png">
+<script src="/static/theme.js"></script>
+<link rel="stylesheet" href="/static/control.css">
+<style>
+    .home { max-width: 1180px; margin: 0 auto; padding: 22px 18px 60px; }
+    .home h1 { margin: 6px 0 2px; font-size: 26px; }
+    .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; margin-top: 18px; }
+    .tile { display: block; text-decoration: none; color: var(--text); background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px;
+        transition: transform .12s, border-color .12s, box-shadow .12s; }
+    .tile:hover { transform: translateY(-2px); border-color: var(--accent); box-shadow: 0 6px 20px rgba(0, 0, 0, .12); }
+    .tile .icon { font-size: 30px; }
+    .tile b { display: block; margin: 8px 0 4px; font-size: 17px; }
+    .tile span { color: var(--muted); font-size: 13px; line-height: 1.45; }
+    .tile.main { background: linear-gradient(150deg, var(--accent), #0b1a52); color: #fff; border-color: transparent; }
+    .tile.main span { color: #dbe4ff; }
+    .columns { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 14px; margin-top: 18px; }
+    .list-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--faint); }
+    .list-row:last-child { border-bottom: 0; }
+    .when { color: var(--muted); font-size: 13px; }
+</style>
+</head>
+<body>
+<header class="top">
+    <a class="brand-logo" href="/home" title="Home page"><img src="/static/brand/tph-circle-128.png" alt="TPH" data-brand-logo="128"></a>
+    <span class="muted" style="color:#c7d2fe">Who Wants to Be a Millionaire? Show control system</span>
+    <span class="spacer"></span>
+    <span id="whoami" class="muted" style="color:#c7d2fe"></span>
+    <form method="post" action="/logout"><button type="submit">Sign out</button></form>
+</header>
+
+<main class="home">
+    <h1 id="hello">Welcome</h1>
+    <div class="muted">What would you like to do?</div>
+
+    <div class="tiles" id="tiles"></div>
+
+    <div class="columns">
+        <div class="card stack">
+            <h3 style="margin:0">On air now</h3>
+            <div id="live"><span class="muted">Loading...</span></div>
+        </div>
+        <div class="card stack">
+            <h3 style="margin:0">Next on the calendar</h3>
+            <div id="next"><span class="muted">Loading...</span></div>
+        </div>
+    </div>
+</main>
+
+<script>
+(async () => {
+    const $ = s => document.querySelector(s);
+    const h = (tag, attrs = {}, ...kids) => {
+        const e = document.createElement(tag);
+        for (const [k, v] of Object.entries(attrs)) { if (k === 'class') e.className = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else e.setAttribute(k, v); }
+        for (const c of kids.flat()) if (c != null && c !== false) e.append(c instanceof Node ? c : document.createTextNode(String(c)));
+        return e;
+    };
+    const get = async url => { const r = await fetch(url, { cache: 'no-store' }); if (r.status === 401) { location.href = '/login?next=/home'; throw new Error('signed out'); } return r.json(); };
+
+    const cfg = await get('/api/config');
+    $('#whoami').textContent = `${cfg.user} (${cfg.role})`;
+    const hour = new Date().getHours();
+    $('#hello').textContent = `${hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'}, ${cfg.user}`;
+
+    const tiles = [
+        ['🎬', 'Control room', 'Run a show: questions, lifelines, money tree, audience, screens.', '/control#show', true],
+        ['❓', 'Questions & stacks', 'Edit the questions of a show, import them, generate them with AI, load a stack.', '/control#questions'],
+        ['📚', 'Question bank', 'All the questions, their difficulty and the stack builder.', '/control#bank', false, cfg.database],
+        ['📅', 'Calendar', 'The calendar of scheduled shows.', '/control#schedule'],
+        ['📝', 'Shows & logs', 'Every show, what is live now and the detailed log of each one.', '/control#shows'],
+        ['🎨', 'Themes', 'Graphic themes, money tree and Clocked settings.', '/control#themes'],
+        ['⚙️', 'Administration', 'Connections, users, system log and information.', '/control#admin', false, cfg.role === 'admin']
+    ];
+    $('#tiles').replaceChildren(...tiles.filter(t => t[5] !== false).map(([icon, title, text, href, main]) =>
+        h('a', { class: 'tile' + (main ? ' main' : ''), href }, h('div', { class: 'icon' }, icon), h('b', {}, title), h('span', {}, text))));
+
+    const fmt = iso => new Date(iso).toLocaleString(undefined, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+
+    async function refresh() {
+        try {
+            const shows = await get('/api/shows');
+            const live = shows.filter(s => s.status !== 'ended' && s.live.outputs > 0);
+            $('#live').replaceChildren(...(live.length ? live.map(s => h('div', { class: 'list-row' },
+                h('div', {}, h('span', { class: 'live-dot on' }), h('b', {}, s.name),
+                    h('div', { class: 'when' }, s.live.level ? `question ${s.live.level}${s.live.inProgress ? ' in progress' : ''}` : 'output connected')),
+                h('a', { class: 'primary', href: '/control#show', onclick: () => localStorage.setItem('mc_room', s.id) }, h('button', { class: 'primary' }, 'Open'))))
+                : [h('span', { class: 'muted' }, 'No show on air at the moment.')]));
+        } catch { /* ignore */ }
+        try {
+            const events = (await get('/api/schedule')).filter(e => e.state === 'upcoming' || e.state === 'live').slice(0, 6);
+            $('#next').replaceChildren(...(events.length ? events.map(e => h('div', { class: 'list-row' },
+                h('div', {}, h('b', {}, e.title), e.state === 'live' ? h('span', { class: 'pill ok', style: 'margin-left:6px' }, 'LIVE') : '',
+                    h('div', { class: 'when' }, fmt(e.start) + (e.roomName ? `  ·  show: ${e.roomName}` : ''))),
+                h('a', { href: '/control#schedule' }, 'Edit')))
+                : [h('span', { class: 'muted' }, 'Nothing scheduled. '), h('a', { href: '/control#schedule' }, 'Add a show to the calendar')]));
+        } catch { /* ignore */ }
+    }
+    refresh();
+    setInterval(refresh, 30000);
+})();
+</script>
+<script src="/static/branding.js"></script>
+</body>
+</html>

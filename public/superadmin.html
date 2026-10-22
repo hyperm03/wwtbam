@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Super-admin - Millionaire Show Control</title>
+<link rel="icon" href="/static/brand/generic-circle-64.png">
+<style>
+  :root { --bg: #0b1530; --panel: #111d40; --line: #2a3a6e; --muted: #a8b2df; --accent: #f39a4c; --ok: #2ecc71; --bad: #ff6b6b; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.4 "Segoe UI", Arial, sans-serif; background: var(--bg); color: #eef; }
+  header { display: flex; align-items: center; gap: 12px; padding: 12px 20px; border-bottom: 1px solid var(--line); background: #0d1938; }
+  header img { width: 36px; height: 36px; } header h1 { font-size: 18px; margin: 0; flex: 1; }
+  main { max-width: 1250px; margin: 0 auto; padding: 18px 20px; display: flex; flex-direction: column; gap: 16px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+  h2 { font-size: 16px; margin: 0; } .muted { color: var(--muted); }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  input, button { font: inherit; border-radius: 8px; border: 1px solid var(--line); background: #08112b; color: #fff; padding: 7px 10px; }
+  button { background: #1a2a5c; cursor: pointer; } button:hover { filter: brightness(1.15); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #000; font-weight: 600; }
+  button.danger { background: #5a1a24; border-color: #8a2a38; }
+  table { width: 100%; border-collapse: collapse; } th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; }
+  .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; background: #24305a; }
+  .pill.running { background: #174d2e; color: #8ff0b4; } .pill.crashed, .pill.stopped { background: #5a1a24; color: #ffb3b3; }
+  .pill.starting { background: #5a4a14; color: #ffe08a; } .pill.suspended { background: #333; color: #bbb; }
+  .domains input { width: 100%; min-width: 220px; }
+  pre { background: #050b1e; border: 1px solid var(--line); border-radius: 8px; padding: 10px; max-height: 360px; overflow: auto; font-size: 12px; white-space: pre-wrap; }
+  #login { max-width: 380px; margin: 12vh auto; }
+  .msg { min-height: 18px; color: var(--accent); } .secret { font-family: Consolas, monospace; background: #050b1e; padding: 2px 6px; border-radius: 6px; color: #ffd27a; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<header><img src="/static/brand/generic-circle-64.png" alt=""><h1>Millionaire Show Control · super-admin</h1><span class="muted" id="info"></span><button id="logout" class="hidden">Sign out</button></header>
+
+<div class="card" id="login">
+  <h2>Platform administrator</h2>
+  <span class="muted">The password is SUPERADMIN_PASSWORD (or the one shown at the first start, in data/superadmin-password.txt).</span>
+  <input type="password" id="pw" placeholder="Password" autocomplete="current-password">
+  <button class="primary" id="signin">Sign in</button>
+  <div class="msg" id="loginMsg"></div>
+</div>
+
+<main id="app" class="hidden">
+  <div class="card">
+    <div class="row" style="justify-content:space-between"><h2>Communities</h2><span class="msg" id="msg"></span></div>
+    <table><thead><tr><th>Community</th><th>Domains (the first is its public address)</th><th>Engine</th><th></th></tr></thead><tbody id="tenants"></tbody></table>
+  </div>
+
+  <div class="card">
+    <h2>New community</h2>
+    <div class="row">
+      <input id="newId" placeholder="id, e.g. tph" size="12">
+      <input id="newName" placeholder="name, e.g. TPH" size="18">
+      <input id="newDomains" placeholder="domains, e.g. tph.example.com" size="34">
+      <input id="newPw" placeholder="admin password (empty = generate)" size="26">
+      <button class="primary" id="create">Create</button>
+    </div>
+    <span class="muted">Point each domain to this server (DNS) and, in Nginx Proxy Manager, forward it to this platform (WebSocket support on). The community's control room is then at https://&lt;domain&gt;/control, user <b>admin</b>.</span>
+  </div>
+
+  <div class="card">
+    <div class="row" style="justify-content:space-between"><h2>Global themes</h2>
+      <span class="row"><input type="file" id="themeFile" accept=".zip"><label><input type="checkbox" id="themeReplace"> replace</label><button id="themeUpload">Upload</button></span></div>
+    <span class="muted">Offered to every community. A community changing one (money tree, questions) gets its own copy of it; it cannot replace or delete a global theme.</span>
+    <div id="themes" class="row"></div>
+  </div>
+
+  <div class="card hidden" id="logCard"><div class="row" style="justify-content:space-between"><h2 id="logTitle">Log</h2><button id="logClose">Close</button></div><pre id="log"></pre></div>
+</main>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const api = async (method, url, body) => {
+    const r = await fetch('/_superadmin/api' + url, { method, headers: body ? { 'Content-Type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined });
+    const d = r.headers.get('content-type')?.includes('json') ? await r.json() : await r.text();
+    if (r.status === 401 && url !== '/login') { show(false); throw new Error('Sign in again'); }
+    if (!r.ok) throw new Error(d.error || r.statusText);
+    return d;
+  };
+  const say = (t, bad) => { $('msg').textContent = t; $('msg').style.color = bad ? 'var(--bad)' : 'var(--accent)'; };
+  let status = null, timer = null;
+  const show = on => { $('login').classList.toggle('hidden', on); $('app').classList.toggle('hidden', !on); $('logout').classList.toggle('hidden', !on); if (on) { refresh(); clearInterval(timer); timer = setInterval(refresh, 5000); } else clearInterval(timer); };
+
+  async function refresh() {
+    status = await api('GET', '/status');
+    $('info').textContent = `v${status.version} · ${status.tenants.length} communities · gateway ${status.gatewayMemoryMb ?? '?'} MB`;
+    const body = $('tenants');
+    const focused = document.activeElement?.dataset?.domainsOf;
+    if (focused) return;                      // do not redraw while a domain list is being edited
+    body.innerHTML = status.tenants.map(t => `<tr>
+      <td><b>${esc(t.name)}</b><br><span class="muted">${esc(t.id)} · port ${t.port}</span></td>
+      <td class="domains"><input data-domains-of="${esc(t.id)}" value="${esc(t.domains.join(', '))}"></td>
+      <td><span class="pill ${t.state}">${t.state}</span><br><span class="muted">${t.memoryMb ? t.memoryMb + ' MB' : ''}${t.restarts ? ` · ${t.restarts} restart(s)` : ''}</span></td>
+      <td class="row">
+        ${t.domains[0] ? `<a href="${status.scheme}://${esc(t.domains[0])}/control" target="_blank"><button>Open</button></a>` : ''}
+        <button data-act="restart" data-id="${esc(t.id)}" ${t.enabled ? '' : 'disabled'}>Restart</button>
+        <button data-act="toggle" data-id="${esc(t.id)}">${t.enabled ? 'Suspend' : 'Resume'}</button>
+        <button data-act="password" data-id="${esc(t.id)}">New admin password</button>
+        <button data-act="log" data-id="${esc(t.id)}">Log</button>
+        <button data-act="delete" data-id="${esc(t.id)}" class="danger">Delete</button>
+      </td></tr>`).join('') || '<tr><td colspan="4" class="muted">No community yet: create the first one below.</td></tr>';
+  }
+  async function themes() {
+    const list = await api('GET', '/themes');
+    $('themes').innerHTML = list.map(t => `<span class="pill">${esc(t.name)}${t.format === 'clocked' ? ' · Clocked' : ''} <button data-theme="${esc(t.name)}" style="padding:0 6px;margin-left:4px">×</button></span>`).join('') || '<span class="muted">No global theme yet.</span>';
+  }
+
+  $('signin').onclick = async () => {
+    try { await api('POST', '/login', { password: $('pw').value }); $('pw').value = ''; show(true); themes(); }
+    catch (e) { $('loginMsg').textContent = e.message; }
+  };
+  $('pw').onkeydown = e => { if (e.key === 'Enter') $('signin').click(); };
+  $('logout').onclick = async () => { await api('POST', '/logout'); show(false); };
+
+  $('tenants').addEventListener('change', async e => {
+    const id = e.target.dataset.domainsOf; if (!id) return;
+    try { await api('PUT', `/tenants/${id}`, { domains: e.target.value }); say('Domains saved'); e.target.blur(); refresh(); }
+    catch (err) { say(err.message, true); }
+  });
+  $('tenants').addEventListener('click', async e => {
+    const b = e.target.closest('button[data-act]'); if (!b) return;
+    const id = b.dataset.id, t = status.tenants.find(x => x.id === id);
+    try {
+      if (b.dataset.act === 'restart') { await api('POST', `/tenants/${id}/restart`); say(`${t.name} restarted`); }
+      if (b.dataset.act === 'toggle') { await api('PUT', `/tenants/${id}`, { enabled: !t.enabled }); say(`${t.name} ${t.enabled ? 'suspended' : 'resumed'}`); }
+      if (b.dataset.act === 'password') {
+        const pw = prompt(`New password of "admin" for ${t.name} (at least 8 characters; empty = generate one). The engine restarts.`, '');
+        if (pw === null) return;
+        const r = await api('POST', `/tenants/${id}/admin-password`, { password: pw });
+        $('msg').innerHTML = `New admin password of ${esc(t.name)}: <span class="secret">${esc(r.adminPassword)}</span>`;
+      }
+      if (b.dataset.act === 'log') { $('logTitle').textContent = `Log - ${t.name}`; $('log').textContent = await api('GET', `/tenants/${id}/log`); $('logCard').classList.remove('hidden'); $('logCard').scrollIntoView(); }
+      if (b.dataset.act === 'delete') {
+        const c = prompt(`Delete "${t.name}"? Its data are archived (data/tenants-archive), not destroyed. Type its id (${id}) to confirm.`);
+        if (c !== id) return;
+        const r = await api('DELETE', `/tenants/${id}?confirm=${encodeURIComponent(id)}`); say(`Deleted - data archived in ${r.archived}`);
+      }
+      refresh();
+    } catch (err) { say(err.message, true); }
+  });
+  $('create').onclick = async () => {
+    try {
+      const r = await api('POST', '/tenants', { id: $('newId').value, name: $('newName').value, domains: $('newDomains').value, adminPassword: $('newPw').value });
+      $('msg').innerHTML = `${esc(r.tenant.name)} created. Admin password: <span class="secret">${esc(r.adminPassword)}</span> (write it down)`;
+      ['newId', 'newName', 'newDomains', 'newPw'].forEach(i => $(i).value = '');
+      refresh();
+    } catch (e) { say(e.message, true); }
+  };
+  $('themeUpload').onclick = async () => {
+    const f = $('themeFile').files[0]; if (!f) return say('Choose a zip first', true);
+    const fd = new FormData(); fd.append('file', f);
+    say('Uploading…');
+    const r = await fetch('/_superadmin/api/themes' + ($('themeReplace').checked ? '?overwrite=1' : ''), { method: 'POST', body: fd });
+    const d = await r.json(); say(r.ok ? `Installed: ${d.installed.join(', ')}` : d.error, !r.ok); themes();
+  };
+  $('themes').addEventListener('click', async e => {
+    const name = e.target.dataset.theme; if (!name) return;
+    if (!confirm(`Delete the global theme "${name}"?`)) return;
+    try { await api('DELETE', `/themes/${encodeURIComponent(name)}`); }
+    catch (err) {
+      if (/Used by/.test(err.message) && confirm(`${err.message}. Those shows would lose their theme. Delete anyway?`)) await api('DELETE', `/themes/${encodeURIComponent(name)}?force=1`);
+      else say(err.message, true);
+    }
+    themes();
+  });
+  $('logClose').onclick = () => $('logCard').classList.add('hidden');
+  // already signed in?
+  api('GET', '/status').then(() => { show(true); themes(); }).catch(() => show(false));
+})();
+</script>
+</body>
+</html>

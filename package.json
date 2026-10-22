@@ -1,0 +1,32 @@
+{
+  "name": "millionaire-web",
+  "version": "1.0.0",
+  "description": "Web control platform for the Project Rave HTML5 Millionaire controllers: show control, audience keypads, theme packs, multiple shows in parallel.",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test test/*.test.mjs",
+    "test:browser": "node --test test/browser.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "exceljs": "^4.4.0",
+    "express": "^4.21.2",
+    "mammoth": "^1.13.0",
+    "multer": "^2.0.2",
+    "mysql2": "^3.24.4",
+    "pdfjs-dist": "^4.10.38",
+    "qrcode": "^1.5.4",
+    "socket.io": "^4.8.1",
+    "word-extractor": "^1.0.4",
+    "yauzl": "^3.2.0"
+  },
+  "devDependencies": {
+    "jquery": "^3.7.1",
+    "playwright-core": "^1.64.1",
+    "socket.io-client": "^4.8.4"
+  }
+}

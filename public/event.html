@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{TITLE}} - TPH</title>
+<meta name="description" content="{{SUMMARY}}">
+<!-- Preview card when the link is shared on Discord and other apps -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="TPH">
+<meta property="og:title" content="{{TITLE}}">
+<meta property="og:description" content="{{SUMMARY}}">
+<meta property="og:url" content="{{URL}}">
+<meta property="og:image" content="{{IMAGE}}">
+<meta name="theme-color" content="#f7931e">
+<meta name="twitter:card" content="summary">
+<link rel="icon" type="image/png" sizes="64x64" href="/static/brand/favicon-64.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/brand/favicon-32.png">
+<link rel="apple-touch-icon" href="/static/brand/favicon-180.png">
+<style>
+    :root { --orange: #f7931e; --orange-2: #fdc27a; --purple: #2a0845; --purple-2: #4b0f7a; --magenta: #c2187a; --text: #fff4e8; --muted: #d7b9ff; --live: #ff3b3b; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; }
+    body { font-family: "Segoe UI", system-ui, -apple-system, Arial, sans-serif; color: var(--text);
+        background:
+            repeating-linear-gradient(180deg, rgba(160, 60, 255, .10) 0 3px, transparent 3px 44px),
+            radial-gradient(circle at 50% 30%, #7a1aa8 0%, #3a0a63 38%, #1a0533 70%, #0d021c 100%) fixed;
+        display: flex; flex-direction: column; align-items: center; padding: 28px 16px 40px; }
+    .logo { width: 132px; height: 132px; filter: drop-shadow(0 8px 24px rgba(247, 147, 30, .35)); }
+    .presents { margin: 10px 0 18px; letter-spacing: 4px; font-size: 13px; font-weight: 700; color: var(--orange); text-transform: uppercase; }
+    .card { width: min(640px, 100%); background: linear-gradient(160deg, rgba(75, 15, 122, .72), rgba(26, 5, 51, .82)); border: 2px solid rgba(247, 147, 30, .55);
+        border-radius: 22px; padding: 26px 26px 22px; box-shadow: 0 20px 60px rgba(0, 0, 0, .45); }
+    .badges { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; min-height: 24px; }
+    .badge { font-size: 12px; font-weight: 800; letter-spacing: 1.5px; padding: 4px 10px; border-radius: 8px; text-transform: uppercase; }
+    .badge.live { background: var(--live); color: #fff; }
+    .badge.onair { background: var(--live); color: #fff; animation: blink 1.4s infinite; }
+    .badge.notlive { background: rgba(255, 255, 255, .14); color: var(--muted); }
+    .badge.cancelled { background: #555; color: #eee; }
+    .badge.ended { background: rgba(255, 255, 255, .14); color: var(--muted); }
+    @keyframes blink { 50% { opacity: .55; } }
+    h1 { margin: 0 0 8px; font-size: clamp(28px, 6vw, 42px); line-height: 1.1;
+        background: linear-gradient(180deg, #fff 20%, var(--orange-2) 60%, var(--orange)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .when { font-size: 18px; font-weight: 600; }
+    .when small { display: block; color: var(--muted); font-weight: 400; font-size: 14px; margin-top: 2px; }
+    .countdown { display: flex; gap: 10px; margin: 18px 0 6px; }
+    .countdown div { flex: 1; text-align: center; background: rgba(13, 2, 28, .6); border: 1px solid rgba(247, 147, 30, .35); border-radius: 12px; padding: 10px 4px; }
+    .countdown b { display: block; font-size: 30px; color: var(--orange-2); font-variant-numeric: tabular-nums; }
+    .countdown span { font-size: 11px; letter-spacing: 1px; color: var(--muted); text-transform: uppercase; }
+    .status { margin: 16px 0 4px; font-size: 18px; font-weight: 700; text-align: center; }
+    .status.onair { color: #ff8a8a; }
+    .place { display: flex; align-items: center; gap: 14px; margin-top: 20px; padding: 14px 16px; border-radius: 14px; background: rgba(88, 101, 242, .18); border: 1px solid rgba(88, 101, 242, .55); }
+    .place svg { width: 38px; height: 38px; flex: none; }
+    .place .name { font-weight: 700; }
+    .place .name small { display: block; color: var(--muted); font-weight: 400; font-size: 13px; }
+    .buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+    .btn { flex: 1 1 180px; text-align: center; text-decoration: none; font-weight: 700; padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, .2);
+        color: var(--text); background: rgba(255, 255, 255, .08); }
+    .btn:hover { filter: brightness(1.12); }
+    .btn.discord { background: #5865f2; border-color: #5865f2; color: #fff; }
+    .btn.orange { background: linear-gradient(180deg, var(--orange-2), var(--orange)); border: 0; color: #2a0845; }
+    .btn.vote { background: var(--live); border-color: var(--live); color: #fff; }
+    .desc { margin-top: 20px; white-space: pre-wrap; line-height: 1.55; color: #f3e6ff; }
+    .hidden { display: none !important; }
+    footer { margin-top: 26px; max-width: 640px; text-align: center; font-size: 12px; color: rgba(215, 185, 255, .7); line-height: 1.5; }
+</style>
+</head>
+<body>
+    <img class="logo" src="/static/brand/tph-circle-256.png" alt="TPH">
+    <div class="presents">TPH presents</div>
+
+    <main class="card">
+        <div class="badges" id="badges"></div>
+        <h1 id="title">{{TITLE}}</h1>
+        <div class="when" id="when">&nbsp;</div>
+
+        <div class="countdown hidden" id="countdown">
+            <div><b id="cdDays">0</b><span>days</span></div>
+            <div><b id="cdHours">00</b><span>hours</span></div>
+            <div><b id="cdMinutes">00</b><span>minutes</span></div>
+            <div><b id="cdSeconds">00</b><span>seconds</span></div>
+        </div>
+        <div class="status hidden" id="status"></div>
+
+        <div class="place">
+            <svg viewBox="0 0 127 96" aria-hidden="true"><path fill="#fff" d="M107.7 8.1A105 105 0 0 0 81.5 0a72 72 0 0 0-3.4 6.8 97.7 97.7 0 0 0-29 0A72 72 0 0 0 45.7 0a105.9 105.9 0 0 0-26.3 8.1C2.8 32.7-1.7 56.6.5 80.2a105.7 105.7 0 0 0 32.2 16.1 77.7 77.7 0 0 0 6.9-11.1 68.4 68.4 0 0 1-10.8-5.2c.9-.7 1.8-1.4 2.7-2.1a75.6 75.6 0 0 0 64.3 0c.9.7 1.8 1.4 2.7 2.1a68.7 68.7 0 0 1-10.9 5.2 77 77 0 0 0 6.9 11.1 105.3 105.3 0 0 0 32.2-16.1c2.6-27.3-4.5-51-18.9-72.1ZM42.5 65.7c-6.3 0-11.4-5.7-11.4-12.8s5-12.8 11.4-12.8S54 45.8 53.9 52.9c0 7-5 12.8-11.4 12.8Zm42.1 0c-6.3 0-11.4-5.7-11.4-12.8s5-12.8 11.4-12.8S96 45.8 95.9 52.9c0 7-5 12.8-11.3 12.8Z"/></svg>
+            <div class="name"><span id="place">TPH Discord server</span><small>Where the show takes place</small></div>
+        </div>
+
+        <div class="buttons">
+            <a class="btn vote hidden" id="voteBtn" href="#">&#128241; Vote with your phone</a>
+            <a class="btn discord" id="discordBtn" href="https://discord.gg/QZMmsRTKrw" target="_blank" rel="noopener">Join the TPH Discord server</a>
+            <a class="btn orange" id="icsBtn" href="/e/{{SLUG}}.ics">&#128197; Add to my calendar</a>
+            <a class="btn hidden" id="watchBtn" href="#" target="_blank" rel="noopener">&#9654; Watch</a>
+        </div>
+
+        <div class="desc hidden" id="desc"></div>
+    </main>
+
+    <footer>
+        &ldquo;Who Wants to Be a Millionaire?&rdquo; Show control system &middot; a TPH fan event, for fun and entertainment only, with non-profit scope.
+        No actual cash prizes are awarded. The format and its trademarks are owned by Sony Pictures Television.
+    </footer>
+
+<script>
+(() => {
+    const slug = '{{SLUG}}';
+    const $ = s => document.getElementById(s);
+    const lang = navigator.language || 'en';
+    let ev = null, timer = null;
+
+    const badge = (cls, text) => { const b = document.createElement('span'); b.className = 'badge ' + cls; b.textContent = text; return b; };
+    const pad = n => String(n).padStart(2, '0');
+
+    function render() {
+        if (!ev) return;
+        const start = new Date(ev.start), end = new Date(start.getTime() + ev.duration * 60000);
+        document.title = `${ev.title} - TPH`;
+        $('title').textContent = ev.title;
+        const day = start.toLocaleDateString(lang, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+        const t = d => d.toLocaleTimeString(lang, { hour: '2-digit', minute: '2-digit' });
+        let zone = '';
+        try { zone = Intl.DateTimeFormat().resolvedOptions().timeZone.replace(/_/g, ' '); } catch { /* ignore */ }
+        $('when').replaceChildren(day, (() => { const s = document.createElement('small'); s.textContent = `${t(start)} - ${t(end)}${zone ? '  (' + zone + ')' : ''}`; return s; })());
+
+        const badges = [];
+        if (ev.state === 'cancelled') badges.push(badge('cancelled', 'Cancelled'));
+        else if (ev.state === 'live') badges.push(badge('onair', '● On air now'));
+        else if (ev.state === 'ended') badges.push(badge('ended', 'Ended'));
+        if (ev.state !== 'cancelled') badges.push(ev.live ? badge('live', 'Live') : badge('notlive', 'Not live'));
+        $('badges').replaceChildren(...badges);
+
+        $('place').textContent = ev.location;
+        $('discordBtn').href = ev.locationUrl;
+        $('discordBtn').textContent = /discord/i.test(ev.locationUrl) ? `Join the ${ev.location}` : `Go to ${ev.location}`;
+        $('voteBtn').classList.toggle('hidden', !ev.vote);
+        if (ev.vote) $('voteBtn').href = ev.vote;
+        $('watchBtn').classList.toggle('hidden', !ev.link);
+        if (ev.link) $('watchBtn').href = ev.link;
+        $('icsBtn').classList.toggle('hidden', ev.state === 'ended' || ev.state === 'cancelled');
+        $('desc').classList.toggle('hidden', !ev.description);
+        $('desc').textContent = ev.description || '';
+
+        const status = $('status');
+        const messages = { live: 'The show is on air now: join us!', ended: 'This show has ended. Thank you for watching!', cancelled: 'This show has been cancelled.' };
+        status.textContent = messages[ev.state] || '';
+        status.className = 'status' + (ev.state === 'live' ? ' onair' : '') + (messages[ev.state] ? '' : ' hidden');
+        tick();
+    }
+
+    function tick() {
+        const left = new Date(ev.start).getTime() - Date.now();
+        const show = ev.state === 'upcoming' && left > 0;
+        $('countdown').classList.toggle('hidden', !show);
+        if (!show) return;
+        const s = Math.floor(left / 1000);
+        $('cdDays').textContent = Math.floor(s / 86400);
+        $('cdHours').textContent = pad(Math.floor(s / 3600) % 24);
+        $('cdMinutes').textContent = pad(Math.floor(s / 60) % 60);
+        $('cdSeconds').textContent = pad(s % 60);
+    }
+
+    async function load() {
+        try {
+            const r = await fetch(`/api/event/${encodeURIComponent(slug)}`, { cache: 'no-store' });
+            if (r.ok) { ev = await r.json(); render(); }
+        } catch { /* keep the last data */ }
+    }
+
+    load();
+    setInterval(load, 30000);
+    timer = setInterval(() => { if (ev) tick(); }, 1000);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Screen - sign in</title>
+<link rel="icon" type="image/png" sizes="64x64" href="/static/brand/favicon-64.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/brand/favicon-32.png">
+<link rel="apple-touch-icon" href="/static/brand/favicon-180.png">
+<script src="/static/theme.js"></script>
+<link rel="stylesheet" href="/static/control.css">
+</head>
+<body class="login-page">
+<form class="login-box" method="post" id="form">
+    <h1 id="title">Screen</h1>
+    <p class="muted" id="show" style="margin:0"></p>
+    <p id="error" class="error" hidden></p>
+    <label id="passwordRow">Password <input type="password" name="password" autofocus required autocomplete="current-password"></label>
+    <button type="submit" class="primary" id="submit">Open</button>
+</form>
+<script>
+(async () => {
+    const [, kind, room] = location.pathname.split('/');
+    const label = { host: 'Host screen', player: 'Player screen', ff: 'Fastest Finger console' }[kind] || 'Screen';
+    document.title = label;
+    document.getElementById('title').textContent = label;
+    const seat = new URLSearchParams(location.search).get('seat');
+    document.getElementById('form').action = `/${kind}/${room}/login` + (seat ? `?seat=${encodeURIComponent(seat)}` : '');
+    const err = new URLSearchParams(location.search).get('error');
+    const p = document.getElementById('error');
+    try {
+        const s = await (await fetch(`/screen-status/${room}/${kind}`)).json();
+        document.getElementById('show').textContent = s.show;
+        if (!s.enabled) {
+            p.hidden = false;
+            p.textContent = kind === 'ff' ? 'The Fastest Finger consoles are not enabled: set their password in the Fastest Finger tab of the control panel.' : 'This screen is not enabled: set its password in the control panel (Output & audience links).';
+            document.getElementById('passwordRow').hidden = true;
+            document.getElementById('submit').hidden = true;
+            return;
+        }
+    } catch { /* offline: the form still works */ }
+    if (err) {
+        p.hidden = false;
+        p.textContent = err === 'locked' ? 'Too many attempts: try again in 15 minutes.' : 'Wrong password.';
+    }
+})();
+</script>
+</body>
+</html>

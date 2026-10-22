@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Millionaire Control - Sign in</title>
+<link rel="icon" type="image/png" sizes="64x64" href="/static/brand/favicon-64.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/brand/favicon-32.png">
+<link rel="apple-touch-icon" href="/static/brand/favicon-180.png">
+<script src="/static/theme.js"></script>
+<link rel="stylesheet" href="/static/control.css">
+</head>
+<body class="login-page">
+<form class="login-box" method="post" action="/login">
+    <img src="/static/brand/tph-circle-256.png" alt="TPH" data-brand-logo="256" style="width:120px;height:120px;align-self:center;margin-bottom:4px">
+    <h1 style="text-align:center">Millionaire Control</h1>
+    <p class="muted" style="margin:0;text-align:center">Who Wants to Be a Millionaire? Show control system</p>
+    <p id="error" class="error" hidden></p>
+    <label>User name <input type="text" name="username" autofocus required autocomplete="username" value="admin"></label>
+    <label>Password <input type="password" name="password" required autocomplete="current-password"></label>
+    <input type="hidden" name="next" id="next">
+    <button type="submit" class="primary">Sign in</button>
+    <a href="/account?next=/home">Sign in with Discord / participant account</a>
+    <a href="/privacy">Privacy and data rights</a>
+</form>
+<script>
+    const q = new URLSearchParams(location.search);
+    document.getElementById('next').value = q.get('next') || '/home';
+    const err = q.get('error');
+    if (err) {
+        const p = document.getElementById('error');
+        p.hidden = false;
+        p.textContent = err === 'locked' ? 'Too many attempts: try again in 15 minutes.' : 'Wrong user name or password.';
+    }
+</script>
+<script src="/static/branding.js"></script>
+</body>
+</html>
