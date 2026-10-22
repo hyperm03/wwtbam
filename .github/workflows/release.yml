@@ -1,6 +1,7 @@
 name: Publish 1.0
 
 on:
+  workflow_dispatch:
   push:
     tags:
       - v1.0
@@ -14,6 +15,8 @@ jobs:
     steps:
       - name: Check out release tag
         uses: actions/checkout@v4
+        with:
+          ref: v1.0
 
       - name: Install Node.js
         uses: actions/setup-node@v4
